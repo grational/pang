@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# ---------------------------------------#
+# __________                             #
+# \______   \_____    ____    ____       #
+#  |     ___/\__  \  /    \  / ___\      #
+#  |    |     / __ \|   |  \/ /_/  >     #
+#  |____|    (____  /___|  /\___  /      #
+#                 \/     \//_____/       #
+#                                        #
+# The pip / node / gem linux wrapper     #
+#                                        #
+# @version: 0.0.1b                       #
+# @author: Giuseppe Ricupero             #
+# @e-mail: <giuseppe.ricupero@gmail.com> #
+# @date: 2020-12-09 15.43                #
+# ---------------------------------------#
+
+# shell version test {{{
+# ------------------
+if [[ ! $BASH_VERSION =~ ^(4[.][3-9]|[5-9][.][0-9]+)[.][0-9]+ ]]; then
+	echo >&2 "Your bash main version ($BASH_VERSION) is lower than the required one (4.3)."
+	exit 1
+fi
+# }}}
+
+# Shell settings and miscellanea {{{
+# ------------------------------
+# bash unofficial strict mode
+set -e # exit if any command has a non-zero exit status (we avoid tests)
+set -u # treat unset variables as an error
+# set -x # print 'resolved' commands before executing them
+set -o pipefail # if any command in a pipeline fails, that return code will be used as the return code of the whole pipeline
+IFS=$'\n\t'
+# absolute path of the real gigawatt executable
+readonly myFILE="$(readlink -e "$(type -P "${BASH_SOURCE}" || echo "${BASH_SOURCE}")")"
+readonly myNAME="${myFILE##*/}" # basename
+readonly myDIR="${myFILE%/*}"   # dirname
+readonly myLIB="${myDIR}/lib"   # lib dirname
+readonly myLOG="${myDIR}/log"   # log dirname
+readonly myEXE="${0##*/}"       # actual executable used
+# }}}
+
+# bare functions {{{
+
+errcho() { # {{{
+	echo 1>&2 ${@}
+} # }}}
+
+die() { # {{{
+	errcho -n "[FATAL ERROR] "
+	errcho "${*}"
+	exit 1
+} # }}}
+
+usage() { # {{{
+	errcho "usage: ${myEXE} <package_manager=(gem|pip|all)> <option=(install|uninstall|update)> [args]"
+	errcho
+	errcho "options:"
+	errcho "  install   package_id_1 [package_id_2 ...]"
+	errcho "  uninstall package_id_1 [package_id_2 ...]"
+	errcho "  update"
+	exit 1
+} # }}}
+
+mandatory_import() { # {{{
+	local file="${1}"
+	[[ -r $file ]] && source $file || die "Cannot source '${file}'"
+} # }}}
+
+# }}}
+
+# import base functions {{{
+# ---------------------
+mandatory_import "${myLIB}/base"
+# }}}
+
+# dependencies test {{{
+# -----------------
+declare -a myDEPS=()
+check_deps myDEPS "$myNAME"
+# }}}
+
+# handle cli parameters {{{
+(( ${#@} < 2 )) && usage
+[[ $1 =~ gem|pip|all ]] && { declare package_manager="${1}"; shift; } || usage
+[[ $1 =~ install|uninstall|update ]] && { declare option="${1}"; shift; } || usage
+declare -a args=(${@})
+# }}}
+
+# load package_manager configuration {{{
+mandatory_import "${myLIB}/${package_manager}"
+# }}}
+
+# switch by option {{{
+case "${option}" in
+	install)
+		install "${args[@]}";;
+	uninstall)
+		uninstall "${args[@]}";;
+	update)
+		update;;
+esac
+# }}}
+
+exit 0
+# vim: ft=sh:fdm=marker

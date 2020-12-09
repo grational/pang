@@ -1,0 +1,26 @@
+## ---------------------------------------- ##
+## @lib: agnostic                           ##
+## @author: Giuseppe Ricupero               ##
+## @date: 2020-12-09 17.36                  ##
+## @description:                            ##
+## package managers agnostic functions      ##
+## ---------------------------------------- ##
+
+export log_file="${myLOG}/${package_manager}_packages"
+touch "${log_file}" || die "Cannot touch the '${log_file}'"
+
+log_package() { # {{{
+	local package="${1}"
+	set +e
+	if ! grep -q "${package}" "${log_file}"; then
+		echo "${package}" >> "${log_file}"
+	fi
+	set -e
+} # }}}
+
+unlog_package() { # {{{
+	local package="${1}"
+	sed -i "/^${package}$/d" "${log_file}"
+} # }}}
+
+# vim: ft=sh:fdm=marker

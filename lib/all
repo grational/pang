@@ -1,0 +1,30 @@
+## ----------------------------------------- ##
+## @lib: all functions                       ##
+## @author: Giuseppe Ricupero                ##
+## @date: 2020-12-09 17.49                   ##
+## @description:                             ##
+## install / uninstall / update functions    ##
+## applied to all the package managers       ##
+## at the same time
+## ----------------------------------------- ##
+
+# load package manager agnostic functions {{{
+mandatory_import "${myLIB}/agnostic"
+# }}}
+
+install() { # {{{
+	die "Cannot install with all package managers"
+} # }}}
+
+uninstall() { # {{{
+	die "Cannot uninstall with all package managers"
+} # }}}
+
+update() { # {{{
+	for package_manager in gem pip; do
+		mandatory_import "${myLIB}/${package_manager}"
+		update
+	done
+} # }}}
+
+# vim: ft=sh:fdm=marker

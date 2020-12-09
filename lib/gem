@@ -1,0 +1,41 @@
+## ---------------------------------------- ##
+## @lib: gem functions                      ##
+## @author: Giuseppe Ricupero               ##
+## @date: 2020-12-09 16.45                  ##
+## @description:                            ##
+## install / uninstall / update functions   ##
+## related to the ruby gems package manager ##
+## ---------------------------------------- ##
+
+# load package manager agnostic functions {{{
+mandatory_import "${myLIB}/agnostic"
+# }}}
+
+install() { # {{{
+	local -a packages=(${@})
+	for package in "${packages[@]}"; do
+		gem install --user-install "${package}"
+		log_package "${package}"
+	done
+} # }}}
+
+uninstall() { # {{{
+	local -a packages=(${@})
+	for package in "${packages[@]}"; do
+		gem uninstall "${package}"
+		unlog_package "${package}"
+	done
+} # }}}
+
+update() { # {{{
+	while read -r package; do
+		echo "${package_manager} update ${package}"
+		gem update "${package}"
+	done < "${log_file}"
+} # }}}
+
+## }}}
+
+### }}}
+
+# vim: ft=sh:fdm=marker
