@@ -3,6 +3,9 @@
 
 # Edit at https://www.toptal.com/developers/gitignore?templates=vim,sublimetext,eclipse,intellij,linux,osx
 
+### Custom ###
+log/
+
 ### Eclipse ###
 .metadata
 bin/
