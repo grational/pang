@@ -1,0 +1,3 @@
+= pang
+
+Handle all local installed packages for the package managers: pip (python), gem (ruby) and npm (javascript)
