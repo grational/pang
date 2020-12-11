@@ -7,9 +7,21 @@
 ## related to the python pip package manager ##
 ## ----------------------------------------- ##
 
-# load package manager agnostic functions {{{
-mandatory_import "${myLIB}/agnostic"
-# }}}
+
+init() { # {{{
+	# load package manager agnostic functions
+	mandatory_import "${myLIB}/agnostic"
+
+	# add pip executables to PATH
+	is_not_empty PY_USER_BIN || {
+		declare -gx PY_USER_BIN="$(python -c 'import site; print(site.USER_BASE + "/bin")')"
+		append_line_if_needed 'export PY_USER_BIN="$(python -c '"'"'import site; print(site.USER_BASE + "/bin")'"'"')"' "${BASH_PATHS}"
+	}
+	already_in_variable PATH "${PY_USER_BIN}" || {
+		eval "$(generate_export_string PATH PY_USER_BIN)"
+		append_line_if_needed '[ -x "$(command -v python)" ] && [ -x "$(command -v pip)" ] && export PATH="${PY_USER_BIN}:${PATH}"' "${BASH_PATHS}"
+	}
+} # }}}
 
 install() { # {{{
 	local -a packages=(${@})
@@ -34,4 +46,5 @@ update() { # {{{
 	done < "${log_file}"
 } # }}}
 
+init
 # vim: ft=sh:fdm=marker

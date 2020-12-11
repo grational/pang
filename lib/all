@@ -21,7 +21,7 @@ uninstall() { # {{{
 } # }}}
 
 update() { # {{{
-	for package_manager in gem pip; do
+	for package_manager in "${myPM[@]}"; do
 		mandatory_import "${myLIB}/${package_manager}"
 		update
 	done

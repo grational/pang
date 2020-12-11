@@ -6,10 +6,17 @@
 ## install / uninstall / update functions   ##
 ## related to the ruby gems package manager ##
 ## ---------------------------------------- ##
+init() { # {{{
+	# load package manager agnostic functions
+	mandatory_import "${myLIB}/agnostic"
 
-# load package manager agnostic functions {{{
-mandatory_import "${myLIB}/agnostic"
-# }}}
+	# add gem executables to PATH
+	gem_bin_path="$(ruby -r rubygems -e 'puts Gem.user_dir')"
+	already_in_variable PATH "${gem_bin_path}" || { 
+		eval "$(generate_export_string PATH gem_bin_path)"
+		append_line_if_needed '[ -x "$(command -v ruby)" ] && [ -x "$(command -v gem)" ] && export PATH="$(ruby -r rubygems -e '"'"'puts Gem.user_dir'"'"')/bin:${PATH}"' "${BASH_PATHS}"
+	}
+} # }}}
 
 install() { # {{{
 	local -a packages=(${@})
@@ -34,8 +41,5 @@ update() { # {{{
 	done < "${log_file}"
 } # }}}
 
-## }}}
-
-### }}}
-
+init
 # vim: ft=sh:fdm=marker

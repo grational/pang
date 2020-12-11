@@ -6,13 +6,54 @@
 ## package managers agnostic functions      ##
 ## ---------------------------------------- ##
 
-export log_file="${myLOG}/${package_manager}_packages"
-touch "${log_file}" || die "Cannot touch the '${log_file}'"
+init() { # {{{
+	if [[ " ${myPM[@]} " =~ " ${package_manager} " ]]; then
+		declare -gx log_file="${myLOG}/${package_manager}_packages"
+		touch "${log_file}" || die "Cannot touch the '${log_file}'"
+	fi
+
+	declare -gx BASH_PATHS="${HOME}/.bash_paths"
+	append_line_if_needed "[[ -r ${BASH_PATHS} ]] && source \"${BASH_PATHS}\"" "${HOME}/.bashrc"
+} # }}}
+
+create_dir_if_needed() { # {{{
+	local dir="${1}"
+	[[ ! -d "${dir}" ]] && mkdir -p "${dir}"
+} # }}}
+
+append_line_if_needed() { # {{{
+	local line="${1}"
+	local file="${2}"
+	grep -qF "${line}" "${file}" &>/dev/null || echo "${line}" >> "${file}"
+} # }}}
+
+is_not_empty() {
+	local -n var="${1}"
+	[[ ! -z ${var:+default} ]] 
+}
+
+already_in_variable() { # {{{
+	local var_name="${1}"
+	local -n var_content="${1}"
+	local new_value="${2}"
+	is_not_empty "${var_name}" && [[ $var_content =~ $new_value ]]
+} # }}}
+
+generate_export_string() { # {{{
+	local stack_var="${1}"
+	local -n var_to_push="${2}"
+
+	if is_not_empty "${stack_var}"; then
+		echo "export ${stack_var}=\"${var_to_push}:\${${stack_var}}\""
+	else
+		echo "export ${stack_var}=\"${var_to_push}\""
+	fi
+} # }}}
 
 log_package() { # {{{
 	local package="${1}"
 	set +e
-	if ! grep -q "${package}" "${log_file}"; then
+	if ! grep -qF "${package}" "${log_file}" &>/dev/null; then
 		echo "${package}" >> "${log_file}"
 	fi
 	set -e
@@ -23,4 +64,5 @@ unlog_package() { # {{{
 	sed -i "/^${package}$/d" "${log_file}"
 } # }}}
 
+init
 # vim: ft=sh:fdm=marker

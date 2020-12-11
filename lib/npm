@@ -1,0 +1,73 @@
+## ----------------------------------------- ##
+## @lib: npm functions                       ##
+## @author: Giuseppe Ricupero                ##
+## @date: 2020-12-09 17.49                   ##
+## @description:                             ##
+## install / uninstall / update functions    ##
+## related to the python pip package manager ##
+## ----------------------------------------- ##
+
+init() { # {{{
+
+	# load package manager agnostic functions
+	mandatory_import "${myLIB}/agnostic"
+
+	# conf
+	NPM_PACKAGES="${HOME}/.local"
+	NPM_LOCAL_CONF="${HOME}/.npmrc"
+	NPM_BIN="${NPM_PACKAGES}/bin"
+	NPM_MAN="${NPM_PACKAGES}/share/man"
+	NPM_NODE="${NPM_PACKAGES}/lib/node_modules"
+
+	# create local npm package installation directory
+	create_dir_if_needed "{NPM_PACKAGES}"
+
+	# npm global installs go to ~/.local
+	append_line_if_needed "prefix = ${NPM_PACKAGES}" "${NPM_LOCAL_CONF}"
+
+	# add npm executables in PATH
+	already_in_variable PATH "${NPM_BIN}" || {
+		eval "$(generate_export_string PATH NPM_BIN)"
+		append_line_if_needed "export PATH=${NPM_BIN}:\${PATH}" "${BASH_PATHS}"
+	}
+
+	# add npm man pages in MANPATH
+	: ${MANPATH:=$(manpath)}
+	already_in_variable MANPATH "${NPM_MAN}" || {
+		eval "$(generate_export_string MANPATH NPM_MAN)"
+		append_line_if_needed "$(generate_export_string MANPATH NPM_MAN)" "${BASH_PATHS}"
+	}
+
+	# add npm modules to NODE_PATH
+	already_in_variable NODE_PATH "${NPM_NODE}" || {
+		eval "$(generate_export_string NODE_PATH NPM_NODE)"
+		append_line_if_needed "$(generate_export_string NODE_PATH NPM_NODE)" "${BASH_PATHS}"
+	}
+
+} # }}}
+
+install() { # {{{
+	local -a packages=(${@})
+	for package in "${packages[@]}"; do
+		npm install --global "${package}"
+		log_package "${package}"
+	done
+} # }}}
+
+uninstall() { # {{{
+	local -a packages=(${@})
+	for package in "${packages[@]}"; do
+		npm uninstall --global "${package}"
+		unlog_package "${package}"
+	done
+} # }}}
+
+update() { # {{{
+	while read -r package; do
+		echo "${package_manager} update ${package}"
+		npm update --global "${package}"
+	done < "${log_file}"
+} # }}}
+
+init
+# vim: ft=sh:fdm=marker

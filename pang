@@ -53,7 +53,7 @@ die() { # {{{
 } # }}}
 
 usage() { # {{{
-	errcho "usage: ${myEXE} <package_manager=(gem|pip|all)> <option=(install|uninstall|update)> [args]"
+	errcho "usage: ${myEXE} <package_manager=(all|gem|npm|pip)> <option=(install|uninstall|update)> [args]"
 	errcho
 	errcho "options:"
 	errcho "  install   package_id_1 [package_id_2 ...]"
@@ -76,13 +76,13 @@ mandatory_import "${myLIB}/base"
 
 # dependencies test {{{
 # -----------------
-declare -a myDEPS=()
-check_deps myDEPS "$myNAME"
+declare -a myPM=(gem npm pip)
+check_deps myPM "$myNAME"
 # }}}
 
 # handle cli parameters {{{
 (( ${#@} < 2 )) && usage
-[[ $1 =~ gem|pip|all ]] && { declare package_manager="${1}"; shift; } || usage
+[[ $1 =~ all|gem|npm|pip ]] && { declare package_manager="${1}"; shift; } || usage
 [[ $1 =~ install|uninstall|update ]] && { declare option="${1}"; shift; } || usage
 declare -a args=(${@})
 # }}}
