@@ -20,7 +20,7 @@ init() { # {{{
 	NPM_NODE="${NPM_PACKAGES}/lib/node_modules"
 
 	# create local npm package installation directory
-	create_dir_if_needed "{NPM_PACKAGES}"
+	create_dir_if_needed "${NPM_PACKAGES}"
 
 	# npm global installs go to ~/.local
 	append_line_if_needed "prefix = ${NPM_PACKAGES}" "${NPM_LOCAL_CONF}"
