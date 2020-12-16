@@ -82,8 +82,11 @@ check_deps myPM "$myNAME"
 
 # handle cli parameters {{{
 (( ${#@} < 2 )) && usage
-[[ $1 =~ all|gem|npm|pip ]] && { declare package_manager="${1}"; shift; } || usage
-[[ $1 =~ install|uninstall|update ]] && { declare option="${1}"; shift; } || usage
+declare allowed_package_managers="all|$(join '|' "${myPM[@]}")"
+[[ $1 =~ $allowed_package_managers ]] && { declare package_manager="${1}"; shift; } || usage
+declare -a myOP=(uninstall install update un in up)
+declare allowed_operations=$(join '|' "${myOP[@]}")
+[[ $1 =~ $allowed_operations ]] && { declare operation="${1}"; shift; } || usage
 declare -a args=(${@})
 # }}}
 
@@ -91,8 +94,8 @@ declare -a args=(${@})
 mandatory_import "${myLIB}/${package_manager}"
 # }}}
 
-# switch by option {{{
-case "${option}" in
+# switch by operation {{{
+case "${operation}" in
 	install)
 		install "${args[@]}";;
 	uninstall)

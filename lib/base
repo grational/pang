@@ -7,6 +7,24 @@
 ## very beginning to test main requirements ##
 ## ---------------------------------------- ##
 
+join() { # {{{
+	local IFS="$1"
+	shift
+	echo "$*"
+} # }}}
+
+split() { # {{{
+	local input="${1}"; shift
+	local IFS="${1}"; shift
+	local -n output="${1}"; shift
+	output=($input) 
+} # }}}
+
+assert() {
+	local IFS=' '
+	[ ${@} ] || { echo 1>&2 "[assertion error] condition '${*}' not satisfied!" && exit 1; }
+}
+
 no_debug() { # {{{
 	local -r function="$1"; shift
 
