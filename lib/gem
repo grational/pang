@@ -29,7 +29,7 @@ install() { # {{{
 uninstall() { # {{{
 	local -a packages=(${@})
 	for package in "${packages[@]}"; do
-		gem uninstall "${package}"
+		gem uninstall --user-install "${package}"
 		unlog_package "${package}"
 	done
 } # }}}
@@ -37,7 +37,7 @@ uninstall() { # {{{
 update() { # {{{
 	while read -r package; do
 		echo "${package_manager} update ${package}"
-		gem update "${package}"
+		gem update --user-install "${package}"
 	done < "${log_file}"
 } # }}}
 
