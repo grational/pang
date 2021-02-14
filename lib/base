@@ -20,6 +20,27 @@ split() { # {{{
 	output=($input) 
 } # }}}
 
+repeat() { # {{{
+	local char="$1"
+	local times="$2"
+	printf -- "${char}%.0s" $(seq 1 "${times}"); echo
+} # }}}
+
+slog() { # {{{
+	case "${1}" in
+		-h1)
+			shift; local text="[${myNAME}] $*"
+			echo; repeat '=' "${#text}"; echo "$text"; repeat '=' "${#text}"
+			;;
+		-h2)
+			shift; local text="[${myNAME}] $*"
+			echo; echo "$text"; repeat '-' "${#text}"
+			;;
+		*)
+			echo "[${myNAME}] $*"
+	esac
+} # }}}
+
 assert() {
 	local IFS=' '
 	[ ${@} ] || { echo 1>&2 "[assertion error] condition '${*}' not satisfied!" && exit 1; }

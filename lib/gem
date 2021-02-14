@@ -41,5 +41,12 @@ update() { # {{{
 	done < "${log_file}"
 } # }}}
 
+list() { # {{{
+	while read -r package; do
+		slog -h2 "${package_manager} info ${package}"
+		gem info "${package}"
+	done < "${log_file}"
+} # }}}
+
 init
 # vim: ft=sh:fdm=marker

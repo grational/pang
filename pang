@@ -53,12 +53,13 @@ die() { # {{{
 } # }}}
 
 usage() { # {{{
-	errcho "usage: ${myEXE} <package_manager=(all|gem|npm|pip)> <option=(install|uninstall|update)> [args]"
+	errcho "usage: ${myEXE} <package_manager=(all|gem|npm|pip)> <option=(install|uninstall|update|list)> [args]"
 	errcho
 	errcho "options:"
 	errcho "  install   package_id_1 [package_id_2 ...]"
 	errcho "  uninstall package_id_1 [package_id_2 ...]"
 	errcho "  update"
+	errcho "  list"
 	exit 1
 } # }}}
 
@@ -84,7 +85,7 @@ check_deps myPM "$myNAME"
 (( ${#@} < 2 )) && usage
 declare allowed_package_managers="all|$(join '|' "${myPM[@]}")"
 [[ $1 =~ $allowed_package_managers ]] && { declare package_manager="${1}"; shift; } || usage
-declare -a myOP=(uninstall install update un in up)
+declare -a myOP=(uninstall install update list)
 declare allowed_operations=$(join '|' "${myOP[@]}")
 [[ $1 =~ $allowed_operations ]] && { declare operation="${1}"; shift; } || usage
 declare -a args=(${@})
@@ -102,6 +103,8 @@ case "${operation}" in
 		uninstall "${args[@]}";;
 	update)
 		update;;
+	list)
+		list;;
 esac
 # }}}
 
