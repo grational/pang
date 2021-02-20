@@ -64,7 +64,7 @@ uninstall() { # {{{
 
 update() { # {{{
 	while read -r package; do
-		echo "${package_manager} update ${package}"
+		slog -h2 "${package_manager} update ${package}"
 		npm update --global "${package}"
 	done < "${log_file}"
 } # }}}

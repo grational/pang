@@ -22,16 +22,15 @@ uninstall() { # {{{
 
 update() { # {{{
 	for package_manager in "${myPM[@]}"; do
-		mandatory_import "${myLIB}/${package_manager}"
-		update
+		slog -h1 "executing ${package_manager} update..."
+		mandatory_import "${myLIB}/${package_manager}" && update
 	done
 } # }}}
 
 list() { # {{{
 	for package_manager in "${myPM[@]}"; do
 		slog -h1 "executing ${package_manager} list..."
-		mandatory_import "${myLIB}/${package_manager}"
-		list
+		mandatory_import "${myLIB}/${package_manager}" && list
 	done
 } # }}}
 
