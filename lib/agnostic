@@ -61,7 +61,7 @@ log_package() { # {{{
 
 unlog_package() { # {{{
 	local package="${1}"
-	sed -i "/^${package}$/d" "${log_file}"
+	sed -i "/^${package//\//\\\/}$/d" "${log_file}"
 } # }}}
 
 init
