@@ -65,14 +65,17 @@ uninstall() { # {{{
 update() { # {{{
 	while read -r package; do
 		slog -h2 "${package_manager} update ${package}"
-		npm update --global --no-audit "$(unversioned_package "${package}")"
+		if versioned_package "$package"; then
+			slog "Skipping update of $package since it has a specific version"
+		else
+			npm update --global --no-audit "${package}"
+		fi
 	done < "${log_file}"
 } # }}}
 
-unversioned_package() { # {{{
+versioned_package() { # {{{
 	local package="$1"
-	[[ $package =~ ^(@?[^@]+)(@[^@]+)?$ ]] && \
-		echo "${BASH_REMATCH[1]}"
+	[[ $package =~ ^@?[^@]+@[^@]+$ ]]
 } # }}}
 
 list() { # {{{
