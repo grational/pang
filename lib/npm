@@ -23,7 +23,9 @@ init() { # {{{
 	create_dir_if_needed "${NPM_PACKAGES}"
 
 	# npm global installs go to ~/.local
-	append_line_if_needed "prefix = ${NPM_PACKAGES}" "${NPM_LOCAL_CONF}"
+	# append_line_if_needed "prefix = ${NPM_PACKAGES}" "${NPM_LOCAL_CONF}"
+	# as an alternative, if really needed
+	# export NPM_CONFIG_PREFIX="${NPM_PACKAGES}"
 
 	# add npm executables in PATH
 	already_in_variable PATH "${NPM_BIN}" || {
@@ -49,7 +51,9 @@ init() { # {{{
 install() { # {{{
 	local -a packages=(${@})
 	for package in "${packages[@]}"; do
-		npm install --global "${package}"
+		npm install \
+			--prefix "${NPM_PACKAGES}" \
+			--global "${package}"
 		log_package "${package}"
 	done
 } # }}}
@@ -57,7 +61,9 @@ install() { # {{{
 uninstall() { # {{{
 	local -a packages=(${@})
 	for package in "${packages[@]}"; do
-		npm uninstall --global "${package}"
+		npm uninstall \
+			--prefix "${NPM_PACKAGES}" \
+			--global "${package}"
 		unlog_package "${package}"
 	done
 } # }}}
@@ -68,7 +74,11 @@ update() { # {{{
 		if versioned_package "$package"; then
 			slog "Skipping update of $package since it has a specific version"
 		else
-			npm update --global --no-audit "${package}"
+			npm update \
+				--prefix "${NPM_PACKAGES}" \
+				--global \
+				--no-audit \
+				"${package}"
 		fi
 	done < "${log_file}"
 } # }}}
@@ -81,7 +91,9 @@ versioned_package() { # {{{
 list() { # {{{
 	while read -r package; do
 		slog -h2 "${package_manager} view ${package}"
-		npm view "${package}"
+		npm view \
+			--prefix "${NPM_PACKAGES}" \
+			"${package}"
 	done < "${log_file}"
 } # }}}
 
