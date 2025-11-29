@@ -26,7 +26,7 @@ init() { # {{{
 install() { # {{{
 	local -a packages=(${@})
 	for package in "${packages[@]}"; do
-		pip install --user --upgrade "${package}"
+		pip install --user --upgrade --break-system-packages "${package}"
 		log_package "${package}"
 	done
 } # }}}
@@ -34,7 +34,7 @@ install() { # {{{
 uninstall() { # {{{
 	local -a packages=(${@})
 	for package in "${packages[@]}"; do
-		pip uninstall "${package}" -y
+		pip uninstall --break-system-packages "${package}" -y
 		unlog_package "${package}"
 	done
 } # }}}
