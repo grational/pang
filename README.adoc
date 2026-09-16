@@ -1,3 +1,22 @@
 = pang
 
 Handle all local installed packages for the package managers: pip (python), gem (ruby) and npm (javascript)
+
+== Updates
+
+Run `pang all update` to update recorded packages with gem, npm and pip, in that order.
+Each manager receives its packages in one command; empty lists are skipped.
+The individual `pang gem update`, `pang npm update` and `pang pip update` commands use the same behavior.
+
+npm entries with an explicit version or tag are skipped, and pip requirements retain their version constraints.
+RubyGems updates skip local documentation generation.
+
+If pip reports `ResolutionImpossible` for a grouped update, Pang retries the packages individually in their recorded order, stopping on the first failed installation.
+Other errors are returned immediately.
+After a successful grouped update or completed retry, `pip check` verifies installed dependencies.
+A failed check makes Pang fail too; it does not undo installations.
+
+== Tests
+
+Run `bash tests/run`.
+The tests use temporary package records, an isolated home directory and replacement package-manager commands, without installing software.
