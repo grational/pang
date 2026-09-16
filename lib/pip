@@ -39,12 +39,31 @@ uninstall() { # {{{
 	done
 } # }}}
 
-update() { # {{{
-	while read -r package; do
-		slog -h2 "${package_manager} update ${package}"
-		install "${package}"
-	done < "${log_file}"
-} # }}}
+update() ( # {{{
+	local -a packages=()
+	local output package
+	read_packages packages
+	(( ${#packages[@]} )) || return 0
+
+	# The subshell keeps cleanup traps local to this update.
+	output=$(mktemp) || return $?
+	trap 'rm -f "$output"' EXIT
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
+
+	slog -h2 "${package_manager} update (${#packages[@]} packages)"
+	pip install --user --upgrade --break-system-packages "${packages[@]}" 2>&1 | tee "$output" || {
+		local pip_status=${PIPESTATUS[0]} output_status=${PIPESTATUS[1]}
+		(( output_status == 0 )) || return "$output_status"
+		(( ${#packages[@]} > 1 )) && grep -q '^ERROR: ResolutionImpossible:' "$output" || return "$pip_status"
+		slog "Dependency conflict; retrying packages individually"
+		for package in "${packages[@]}"; do
+			slog -h2 "${package_manager} update ${package}"
+			pip install --user --upgrade --break-system-packages "${package}" || return $?
+		done
+	}
+	pip check
+) # }}}
 
 list() { # {{{
 	while read -r package; do
