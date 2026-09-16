@@ -69,18 +69,24 @@ uninstall() { # {{{
 } # }}}
 
 update() { # {{{
-	while read -r package; do
-		slog -h2 "${package_manager} update ${package}"
+	local -a packages=() updates=()
+	local package
+	read_packages packages
+	(( ${#packages[@]} )) || return 0
+	for package in "${packages[@]}"; do
 		if versioned_package "$package"; then
 			slog "Skipping update of $package since it has a specific version"
 		else
-			npm update \
-				--prefix "${NPM_PACKAGES}" \
-				--global \
-				--no-audit \
-				"${package}"
+			updates+=("${package}")
 		fi
-	done < "${log_file}"
+	done
+	(( ${#updates[@]} )) || return 0
+	slog -h2 "${package_manager} update (${#updates[@]} packages)"
+	npm update \
+		--prefix "${NPM_PACKAGES}" \
+		--global \
+		--no-audit \
+		"${updates[@]}"
 } # }}}
 
 versioned_package() { # {{{
