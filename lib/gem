@@ -35,10 +35,11 @@ uninstall() { # {{{
 } # }}}
 
 update() { # {{{
-	while read -r package; do
-		slog -h2 "${package_manager} update ${package}"
-		gem update --user-install "${package}"
-	done < "${log_file}"
+	local -a packages=()
+	read_packages packages
+	(( ${#packages[@]} )) || return 0
+	slog -h2 "${package_manager} update (${#packages[@]} packages)"
+	gem update --user-install --no-document "${packages[@]}"
 } # }}}
 
 list() { # {{{
