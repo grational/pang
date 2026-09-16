@@ -50,6 +50,15 @@ generate_export_string() { # {{{
 	fi
 } # }}}
 
+read_packages() { # {{{
+	local -n result="${1}"
+	local package
+	result=()
+	while IFS= read -r package || [[ -n $package ]]; do
+		[[ $package =~ ^[[:space:]]*$ ]] || result+=("${package}")
+	done < "${log_file}"
+} # }}}
+
 log_package() { # {{{
 	local package="${1}"
 	set +e
