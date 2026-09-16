@@ -1,0 +1,104 @@
+# shellcheck shell=bash
+: "${workspace:?Run tests through tests/run}"
+: "${test_home:?Run tests through tests/run}"
+export PANG_TEST_MODE PANG_TEST_FAIL_MANAGER
+
+reset_case
+printf 'npm\n\n@scope/tool\nfixed@1.2.3\n@scope/fixed@2\nlast' > "$workspace/pang/log/npm_packages"
+expect_call npm update --prefix "$test_home/.local" --global --no-audit npm @scope/tool last
+run_update 0 npm
+grep -q 'Skipping update of fixed@1.2.3' "$workspace/output"
+grep -q 'Skipping update of @scope/fixed@2' "$workspace/output"
+passed=$((passed + 1))
+
+reset_case
+printf 'pip\n\npillow==9.4.0\nrequests >=2' > "$workspace/pang/log/pip_packages"
+expect_call pip install --user --upgrade --break-system-packages pip pillow==9.4.0 'requests >=2'
+expect_call pip check
+run_update 0 pip
+passed=$((passed + 1))
+
+reset_case
+printf 'asciidoctor-pdf\n\nneovim' > "$workspace/pang/log/gem_packages"
+expect_call gem update --user-install --no-document asciidoctor-pdf neovim
+run_update 0 gem
+passed=$((passed + 1))
+
+for manager in npm pip gem all; do
+	reset_case
+	printf '\n \t\n' > "$workspace/pang/log/${manager/all/npm}_packages"
+	run_update 0 "$manager"
+	passed=$((passed + 1))
+done
+
+reset_case
+printf 'fixed@1\n@scope/fixed@2\n' > "$workspace/pang/log/npm_packages"
+run_update 0 npm
+passed=$((passed + 1))
+
+for mode in success broken conflict conflict-broken conflict-retry-failure network permission unknown output-failure; do
+	reset_case
+	PANG_TEST_MODE=$mode
+	printf 'alpha\nbeta\ngamma\n' > "$workspace/pang/log/pip_packages"
+	expect_call pip install --user --upgrade --break-system-packages alpha beta gamma
+	status=0
+	case "$mode" in
+		conflict*)
+			expect_call pip install --user --upgrade --break-system-packages alpha
+			expect_call pip install --user --upgrade --break-system-packages beta
+			if [[ $mode == conflict-retry-failure ]]; then
+				status=29
+			else
+				expect_call pip install --user --upgrade --break-system-packages gamma
+			fi
+			;;
+		network) status=7;;
+		permission) status=13;;
+		unknown) status=17;;
+		output-failure) status=31;;
+	esac
+	if (( status == 0 )); then
+		expect_call pip check
+		[[ $mode != *broken* ]] || status=19
+	fi
+	run_update "$status" pip
+	if [[ $mode == conflict* ]]; then
+		grep -q 'ERROR: ResolutionImpossible:' "$workspace/output"
+		grep -qi 'retrying.*individually' "$workspace/output"
+	fi
+	passed=$((passed + 1))
+done
+
+reset_case
+PANG_TEST_MODE=single-conflict
+printf 'alpha\n' > "$workspace/pang/log/pip_packages"
+expect_call pip install --user --upgrade --break-system-packages alpha
+run_update 1 pip
+passed=$((passed + 1))
+
+for failing_manager in '' gem npm pip; do
+	reset_case
+	PANG_TEST_FAIL_MANAGER=$failing_manager
+	for manager in gem npm pip; do
+		printf 'alpha\nbeta\n' > "$workspace/pang/log/${manager}_packages"
+	done
+	expect_call gem update --user-install --no-document alpha beta
+	if [[ $failing_manager != gem ]]; then
+		expect_call npm update --prefix "$test_home/.local" --global --no-audit alpha beta
+		if [[ $failing_manager != npm ]]; then
+			expect_call pip install --user --upgrade --break-system-packages alpha beta
+			[[ $failing_manager == pip ]] || expect_call pip check
+		fi
+	fi
+	status=0
+	[[ -z $failing_manager ]] || status=23
+	run_update "$status" all
+	passed=$((passed + 1))
+done
+
+reset_case
+PANG_TEST_MODE=interrupted
+printf 'alpha\nbeta\n' > "$workspace/pang/log/pip_packages"
+expect_call pip install --user --upgrade --break-system-packages alpha beta
+run_update 143 pip
+passed=$((passed + 1))

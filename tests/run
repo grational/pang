@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+workspace=$(mktemp -d)
+trap 'rm -rf "$workspace"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+mkdir -p "$workspace/pang/log" "$workspace/bin"
+cp "$project/pang" "$workspace/pang/"
+cp -R "$project/lib" "$workspace/pang/"
+cp "$project/tests/package-manager" "$workspace/bin/"
+chmod +x "$workspace/bin/package-manager"
+for manager in npm pip gem ruby tee; do
+	ln -s package-manager "$workspace/bin/$manager"
+done
+
+test_home="$workspace/home"
+export PANG_TEST_TEE
+PANG_TEST_TEE=$(command -v tee)
+export PATH="$workspace/bin:$PATH"
+export PY_USER_BIN="$workspace/bin" MANPATH="$workspace/man"
+export TMPDIR="$workspace/tmp"
+export PANG_TEST_CALLS="$workspace/calls" PANG_TEST_MODE=success
+export PANG_TEST_FAIL_MANAGER=
+passed=0
+
+reset_case() {
+	rm -rf "$test_home" "$TMPDIR"
+	mkdir -p "$test_home" "$TMPDIR"
+	: > "$test_home/.bashrc"
+	: > "$PANG_TEST_CALLS"
+	: > "$workspace/expected"
+	: > "$workspace/pang/log/npm_packages"
+	: > "$workspace/pang/log/pip_packages"
+	: > "$workspace/pang/log/gem_packages"
+	PANG_TEST_MODE=success
+	PANG_TEST_FAIL_MANAGER=
+}
+
+expect_call() {
+	printf '%q ' "$@" >> "$workspace/expected"
+	printf '\n' >> "$workspace/expected"
+}
+
+run_update() {
+	local expected_status=$1 manager=$2 status=0
+	cp -R "$workspace/pang/log" "$workspace/records"
+	HOME="$test_home" bash "$workspace/pang/pang" "$manager" update > "$workspace/output" 2>&1 || status=$?
+	if (( status != expected_status )); then
+		cat "$workspace/output" >&2
+		printf 'Expected exit %s, got %s\n' "$expected_status" "$status" >&2
+		return 1
+	fi
+	diff -u "$workspace/expected" "$PANG_TEST_CALLS"
+	diff -r "$workspace/records" "$workspace/pang/log"
+	rm -rf "$workspace/records"
+	[[ -z $(find "$TMPDIR" -mindepth 1 -print -quit) ]]
+}
+
+# shellcheck source=tests/update
+source "$project/tests/update"
+printf 'Passed %s update scenarios\n' "$passed"

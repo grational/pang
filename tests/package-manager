@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -eu
+
+manager=${0##*/}
+if [[ $manager == ruby ]]; then
+	printf '%s/gems\n' "$HOME"
+	exit 0
+fi
+if [[ $manager == tee ]]; then
+	if [[ $PANG_TEST_MODE == output-failure ]]; then
+		cat > /dev/null
+		exit 31
+	fi
+	exec "$PANG_TEST_TEE" "$@"
+fi
+
+{
+	printf '%q ' "$manager" "$@"
+	printf '\n'
+} >> "$PANG_TEST_CALLS"
+
+[[ $manager != "${PANG_TEST_FAIL_MANAGER:-}" ]] || exit 23
+[[ $manager == pip ]] || exit 0
+
+if [[ $1 == check ]]; then
+	[[ $PANG_TEST_MODE != *broken* ]] || exit 19
+	exit 0
+fi
+
+shift 4 # install --user --upgrade --break-system-packages
+case "$PANG_TEST_MODE" in
+	conflict*|single-conflict)
+		if (( $# > 1 )) || [[ $PANG_TEST_MODE == single-conflict ]]; then
+			echo 'ERROR: ResolutionImpossible: conflicting dependencies' >&2
+			exit 1
+		fi
+		if [[ $PANG_TEST_MODE == conflict-retry-failure && $1 == beta ]]; then
+			exit 29
+		fi
+		;;
+	network)
+		echo 'ERROR: Connection timed out' >&2
+		exit 7
+		;;
+	permission)
+		echo 'ERROR: Permission denied' >&2
+		exit 13
+		;;
+	unknown)
+		echo 'ERROR: Unknown failure' >&2
+		exit 17
+		;;
+	interrupted)
+		kill -TERM "$PPID"
+		exit 143
+		;;
+esac
