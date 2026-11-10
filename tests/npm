@@ -1,0 +1,74 @@
+# shellcheck shell=bash
+: "${workspace:?Run tests through tests/run}"
+: "${test_home:?Run tests through tests/run}"
+export PANG_TEST_MODE
+
+assert_npm_advice() {
+	local command
+	grep -Fq 'npm warn ERESOLVE overriding peer dependency' "$workspace/output"
+	grep -Fq '[pang] Peer dependency conflict' "$workspace/output"
+	grep -Fq '[pang] npm blocked install scripts' "$workspace/output"
+	printf -v command '%q ' npm rebuild --prefix "$test_home/.local" --global --foreground-scripts --allow-scripts=@opencode/cli @opencode/cli@2.2.6
+	grep -Fq "$command" "$workspace/output"
+	printf -v command '%q ' npm rebuild --prefix "$test_home/.local" --global --foreground-scripts --allow-scripts=native-tool native-tool@1.0.0-beta.2
+	grep -Fq "$command" "$workspace/output"
+}
+
+for mode in npm-peer npm-blocked npm-warnings npm-warning-failure npm-unknown-warning output-failure npm-interrupted; do
+	reset_case
+	PANG_TEST_MODE=$mode
+	printf '@salesforce/cli\n@opencode/cli\n' > "$workspace/pang/log/npm_packages"
+	expect_call npm update --prefix "$test_home/.local" --global --no-audit @salesforce/cli @opencode/cli
+	status=0
+	case "$mode" in
+		npm-warning-failure) status=29;;
+		output-failure) status=31;;
+		npm-interrupted) status=143;;
+	esac
+	run_update "$status" npm
+	case "$mode" in
+		npm-peer)
+			grep -Fq '[pang] Peer dependency conflict' "$workspace/output"
+			! grep -Fq '[pang] npm blocked install scripts' "$workspace/output"
+			;;
+		npm-blocked)
+			grep -Fq '[pang] npm blocked install scripts' "$workspace/output"
+			! grep -Fq '[pang] Peer dependency conflict' "$workspace/output"
+			;;
+		npm-warnings|npm-warning-failure) assert_npm_advice;;
+		npm-unknown-warning)
+			grep -Fq 'npm warn deprecated' "$workspace/output"
+			! grep -Eq '\[pang\] (Peer dependency conflict|npm blocked install scripts)' "$workspace/output"
+			;;
+	esac
+	passed=$((passed + 1))
+done
+
+reset_case
+PANG_TEST_MODE=npm-warnings
+expect_call npm install --prefix "$test_home/.local" --global @opencode/cli
+run_pang 0 npm install @opencode/cli
+assert_npm_advice
+[[ $(cat "$workspace/pang/log/npm_packages") == @opencode/cli ]]
+passed=$((passed + 1))
+
+reset_case
+PANG_TEST_MODE=npm-warning-failure
+expect_call npm install --prefix "$test_home/.local" --global @opencode/cli
+run_pang 29 npm install @opencode/cli another-package
+assert_npm_advice
+[[ ! -s $workspace/pang/log/npm_packages ]]
+passed=$((passed + 1))
+
+reset_case
+PANG_TEST_MODE=npm-warnings
+for manager in gem npm pip; do
+	printf 'alpha\n' > "$workspace/pang/log/${manager}_packages"
+done
+expect_call gem update --user-install --no-document alpha
+expect_call npm update --prefix "$test_home/.local" --global --no-audit alpha
+expect_call pip install --user --upgrade --break-system-packages alpha
+expect_call pip check
+run_update 0 all
+assert_npm_advice
+passed=$((passed + 1))

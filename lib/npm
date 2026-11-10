@@ -4,7 +4,7 @@
 ## @date: 2020-12-09 17.49                   ##
 ## @description:                             ##
 ## install / uninstall / update functions    ##
-## related to the python pip package manager ##
+## related to the npm package manager        ##
 ## ----------------------------------------- ##
 
 init() { # {{{
@@ -51,9 +51,9 @@ init() { # {{{
 install() { # {{{
 	local -a packages=(${@})
 	for package in "${packages[@]}"; do
-		npm install \
+		npm_with_diagnostics install \
 			--prefix "${NPM_PACKAGES}" \
-			--global "${package}"
+			--global "${package}" || return $?
 		log_package "${package}"
 	done
 } # }}}
@@ -82,11 +82,47 @@ update() { # {{{
 	done
 	(( ${#updates[@]} )) || return 0
 	slog -h2 "${package_manager} update (${#updates[@]} packages)"
-	npm update \
+	npm_with_diagnostics update \
 		--prefix "${NPM_PACKAGES}" \
 		--global \
 		--no-audit \
 		"${updates[@]}"
+} # }}}
+
+npm_with_diagnostics() ( # {{{
+	local output status=0 output_status=0
+	output=$(mktemp) || return $?
+	trap 'rm -f "$output"' EXIT
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
+
+	npm "$@" 2>&1 | tee "$output" || {
+		status=${PIPESTATUS[0]} output_status=${PIPESTATUS[1]}
+	}
+	npm_warning_advice "$output" >&2
+	(( status == 0 )) || return "$status"
+	return "$output_status"
+) # }}}
+
+npm_warning_advice() { # {{{
+	local output=$1 line spec package
+	local blocked_package='^npm (warn|WARN) install-scripts[[:space:]]+((@[^/[:space:]]+/)?[^@[:space:]]+@[^[:space:]]+)[[:space:]]+\('
+	if grep -Eq '^npm (warn|WARN) ERESOLVE overriding peer dependency' "$output"; then
+		slog 'Peer dependency conflict: review the package chain above; update the affected parent package or report it to its maintainer.'
+	fi
+	if grep -Fq 'install scripts blocked because they are not covered by allowScripts' "$output"; then
+		slog "npm blocked install scripts; affected tools may be incomplete. Pang installs into ${NPM_PACKAGES}."
+		slog 'After reviewing and trusting each package, run the matching command to retry its scripts once:'
+		while IFS= read -r line; do
+			[[ $line =~ $blocked_package ]] || continue
+			spec=${BASH_REMATCH[2]}
+			package=${spec%@*}
+			printf '  '
+			printf '%q ' npm rebuild --prefix "$NPM_PACKAGES" --global --foreground-scripts "--allow-scripts=$package" "$spec"
+			printf '\n'
+		done < "$output"
+		slog 'For future updates, add the approved package name to allow-scripts in ~/.npmrc, preserving existing entries.'
+	fi
 } # }}}
 
 versioned_package() { # {{{

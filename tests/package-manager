@@ -20,6 +20,31 @@ fi
 } >> "$PANG_TEST_CALLS"
 
 [[ $manager != "${PANG_TEST_FAIL_MANAGER:-}" ]] || exit 23
+if [[ $manager == npm ]]; then
+	case "$PANG_TEST_MODE" in
+		npm-peer|npm-warnings|npm-warning-failure)
+			echo 'npm warn ERESOLVE overriding peer dependency' >&2
+			;;
+	esac
+	case "$PANG_TEST_MODE" in
+		npm-blocked|npm-warnings|npm-warning-failure)
+			cat >&2 <<-'WARNINGS'
+			npm warn install-scripts 2 packages had install scripts blocked because they are not covered by allowScripts:
+			npm warn install-scripts   @opencode/cli@2.2.6 (postinstall: node ./postinstall.mjs)
+			npm warn install-scripts   native-tool@1.0.0-beta.2 (install: node ./install.js)
+			WARNINGS
+			;;
+		npm-unknown-warning)
+			echo 'npm warn deprecated some-package@1.0.0: no longer supported' >&2
+			;;
+		npm-interrupted)
+			kill -TERM "$PPID"
+			exit 143
+			;;
+	esac
+	[[ $PANG_TEST_MODE != npm-warning-failure ]] || exit 29
+	exit 0
+fi
 [[ $manager == pip ]] || exit 0
 
 if [[ $1 == check ]]; then

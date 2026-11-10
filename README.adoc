@@ -16,6 +16,30 @@ Other errors are returned immediately.
 After a successful grouped update or completed retry, `pip check` verifies installed dependencies.
 A failed check makes Pang fail too; it does not undo installations.
 
+=== npm warnings
+
+Pang preserves npm output and its exit status during installation and updates, and adds advice for these warnings:
+
+* `ERESOLVE overriding peer dependency`: packages disagree about a shared dependency's supported version (a _peer_ is a counterpart).
+Update the affected parent package or report the conflict to its maintainer.
+Pang does not add `--force` or `--legacy-peer-deps`, which would bypass dependency checks.
+* `install-scripts`: npm blocked unapproved installation scripts; a successful update can leave an affected tool incomplete.
+Pang prints a separate `npm rebuild` command for each package listed in the warning, including its installed version and Pang's `--prefix` directory.
+`rebuild` reruns installation scripts for the matching installed package without upgrading it.
+Review the package before running the suggested command; Pang never runs it automatically.
+
+For example, to authorize OpenCode's scripts once and complete an already installed version:
+
+[source,bash]
+----
+npm rebuild --prefix "$HOME/.local" --global --foreground-scripts --allow-scripts=@opencode/cli @opencode/cli@2.2.6
+----
+
+For future updates, add the approved package name to `allow-scripts` in `~/.npmrc`, preserving any existing entries.
+Names must match exactly: approval for `opencode-ai` does not cover `@opencode/cli`.
+Pang does not modify that policy or turn these warnings into errors.
+Diagnostics recognize npm's warning text; unrecognized output is still displayed unchanged.
+
 == Tests
 
 Run `bash tests/run`.

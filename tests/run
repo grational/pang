@@ -44,21 +44,29 @@ expect_call() {
 	printf '\n' >> "$workspace/expected"
 }
 
-run_update() {
-	local expected_status=$1 manager=$2 status=0
-	cp -R "$workspace/pang/log" "$workspace/records"
-	HOME="$test_home" bash "$workspace/pang/pang" "$manager" update > "$workspace/output" 2>&1 || status=$?
+run_pang() {
+	local expected_status=$1 status=0
+	shift
+	HOME="$test_home" bash "$workspace/pang/pang" "$@" > "$workspace/output" 2>&1 || status=$?
 	if (( status != expected_status )); then
 		cat "$workspace/output" >&2
 		printf 'Expected exit %s, got %s\n' "$expected_status" "$status" >&2
 		return 1
 	fi
 	diff -u "$workspace/expected" "$PANG_TEST_CALLS"
+	[[ -z $(find "$TMPDIR" -mindepth 1 -print -quit) ]]
+}
+
+run_update() {
+	local expected_status=$1 manager=$2
+	cp -R "$workspace/pang/log" "$workspace/records"
+	run_pang "$expected_status" "$manager" update
 	diff -r "$workspace/records" "$workspace/pang/log"
 	rm -rf "$workspace/records"
-	[[ -z $(find "$TMPDIR" -mindepth 1 -print -quit) ]]
 }
 
 # shellcheck source=tests/update
 source "$project/tests/update"
-printf 'Passed %s update scenarios\n' "$passed"
+# shellcheck source=tests/npm
+source "$project/tests/npm"
+printf 'Passed %s scenarios\n' "$passed"
